@@ -1,0 +1,35 @@
+<launch>
+    <!-- Inicializacion de el entorno de simulacuón del Turtlebot -->
+    <include file="$(find very_simple_robot_simulator)/launch/minimal_simulator.launch" />
+    <include file="$(find very_simple_robot_simulator)/launch/lidar_simulator.launch" />  
+    <include file="$(find very_simple_robot_simulator)/launch/world_state.launch" />
+    
+    <!-- Nodo que se encarga de filtrar particulas y localizar al robot -->
+    <node pkg="lab3_pkg" name="localization" type="localization.py" output="screen"/>
+    <!-- Nodo que se encarga de realizar los movimientos en el mapa -->
+    <node pkg="lab3_pkg" name="movement" type="movement.py" output="screen"/>
+    <!-- Nodo que se encarga de mostrar las particulas en el mapa e iniciar el flujo -->
+    <node pkg="lab3_pkg" name="manager" type="manager.py" output="screen"/>
+    <!-- Nodo que se encarga de manejar el sonido -->
+    <node pkg="lab3_pkg" name="sound_node" type="sound_node.py" output="screen"/>
+    <node name="soundplay_node" pkg="sound_play" type="soundplay_node.py"/>
+
+    <!-- Controlador de bajo nivle de orientacion -->
+    <node pkg="pid" name="rotation_ctrl" type="controller" ns="robot_rotation" >
+        <param name="Kp" value="0.7" />     <!--P = 0.7   PI =0.6 -->
+        <param name="Ki" value="0.0" />     <!--P = 0.0   PI =0.001 -->
+        <param name="Kd" value="0.0" />
+        <param name="upper_limit" value="0.6" />
+        <param name="lower_limit" value="-0.6" />
+    </node>
+    <!-- Controlador de bajo nivle de distancia -->
+    <node pkg="pid" name="distance_ctrl" type="controller" ns="robot_distance" >
+        <param name="Kp" value="0.4" />     <!--P = 0.4  PI = 0.55-->
+        <param name="Ki" value="0.0" />     <!--P = 0.0  PI = 0.001-->
+        <param name="Kd" value="0.0" />
+        <param name="upper_limit" value="0.2" />
+        <param name="lower_limit" value="-0.2" />
+    </node>
+    
+
+</launch>
