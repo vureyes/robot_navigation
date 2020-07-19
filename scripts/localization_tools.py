@@ -86,6 +86,9 @@ class ParticleLocalization:
         return particles
         # Retorna una lista de particulas distribuidas uniformemente
 
+    def create_particles_from_pose(self, pose):
+        pass
+
     def fit_particles(self):
         std = np.std(self.particles, axis=0)
         if std[0] < 8 and std[1] < 8 and std[2] < 5:

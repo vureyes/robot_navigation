@@ -12,24 +12,16 @@ from movement import get_theta
 
 laser_reading = None
 navigation_publisher = None
-orientation_enable_publisher=None
-orientation_set_point_publisher=None
-orientation_plant_state_publisher=None
-left_distance = None
-front_distance = None
 
-last_linear_vel = 0
-last_angluar_vel = 0
-control_rate = 10
-n_particles = 5000
+N_PARTICLES = 5000
 
-obstacle_ahead = False
 current_pose = None
 last_pose = Pose()
 
 particle_localization = None
 particle_publisher = None
 movement_publisher = None
+pose_publisher = None
 sound_publisher = None
 
 def localization_init():
@@ -45,6 +37,8 @@ def localization_init():
     movement_publisher = rospy.Publisher("/move", Bool, queue_size=10)
     global sound_publisher
     sound_publisher = rospy.Publisher("/sound_string", String, queue_size=10)
+    global pose_publisher
+    pose_publisher = rospy.Publisher("/particle_pose", Pose, queue_size=10)
 
     rospy.spin()
 
@@ -54,14 +48,13 @@ def accion_map_cb(occ_grid):
     map_resolution = occ_grid.info.resolution
     map_img = np.array(occ_grid.data).reshape((height, width))
     global particle_localization
-    particle_localization = ParticleLocalization(map_img, map_resolution, n_particles, fixed_angle=False)
+    particle_localization = ParticleLocalization(map_img, map_resolution, N_PARTICLES, fixed_angle=False)
     rate = rospy.Rate(0.5)
     rate.sleep()
     send_particles()
 
 def accion_command_cb(command):
     if command.data == "test":
-        # particle_localization.test_sensor_model(laser_reading)
         particle_localization.test_MCL(laser_reading)
         send_particles()
     elif command.data == "run":
@@ -69,7 +62,6 @@ def accion_command_cb(command):
         send_particles()
         determine_location()
         # movement_publisher.publish(Bool(True))
-
     elif command.data == "move":
         particle_localization.test_motion_model([0.2,0,0])
         send_particles()
@@ -78,13 +70,9 @@ def accion_laser_cb(data):
     ranges = data.ranges[62:119]
     global laser_reading
     laser_reading = ranges
-    global left_distance
-    left_distance = ranges[-1]
-    global obstacle_ahead
-    obstacle_ahead = True if ranges[28]< 0.45 or ranges[-1]<0.45 else False
 
 
-def accion_odom_cb(odom):               # Callback que se encarga de actualizar posicion basada en odometria
+def accion_odom_cb(odom):
     global current_pose
     current_pose = odom.pose.pose
     

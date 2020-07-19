@@ -1,10 +1,9 @@
 #!/usr/bin/env python
 import rospy
 from geometry_msgs.msg import PoseArray
-from nav_msgs.msg import OccupancyGrid, Odometry
+from nav_msgs.msg import OccupancyGrid
 import cv2
 import numpy as np
-from localization_tools import ParticleLocalization
 
 start_publisher = None
 map_img = None
@@ -12,8 +11,8 @@ final_img = None
 map_loaded = False
 particles = []
 
-def manager_init():
-    rospy.init_node('manager', anonymous=True)
+def viualization_init():
+    rospy.init_node('particle_visualization', anonymous=True)
     rospy.Subscriber("/map", OccupancyGrid, accion_map_cb)
     rospy.Subscriber("/particles", PoseArray, accion_particles_cb)
     plot_map()
@@ -58,6 +57,6 @@ def plot_map():
 
 if __name__ == '__main__':
     try:
-        manager_init()
+        visualization_init()
     except rospy.ROSInterruptException:
         pass
