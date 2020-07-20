@@ -108,8 +108,8 @@ class ParticleLocalization:
         count = 0
         while count < self.n_particles:
             dist_error = DISTANCE_ERROR/self.map_resolution
-            x = int(pose_x + np.random.normal(0,DISTANCE_ERROR/(3*self.map_resolution)))
-            y = int(pose_y + np.random.normal(0,DISTANCE_ERROR/(3*self.map_resolution)))
+            x = int(pose_x + np.random.normal(0,DISTANCE_ERROR/(5*self.map_resolution)))
+            y = int(pose_y + np.random.normal(0,DISTANCE_ERROR/(5*self.map_resolution)))
             theta = pose_theta + np.random.normal(ORIENTATION_ERROR)
             if self.map_img[x,y] == 0:
                 particles.append([x,y,theta])

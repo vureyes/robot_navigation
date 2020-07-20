@@ -12,6 +12,10 @@ def get_theta(quaternion):
         theta = theta%(2*pi)
     return theta
 
+def get_quaternion(theta):
+    quaternion = quaternion_from_euler(0,0,theta,'rxyz')
+    return quaternion
+
 # Calcula primer angulo para apuntar al objetivo
 def angulo_direccion(goal_y, current_y, goal_x, current_x):
     angulo = atan2(goal_y-current_y, goal_x - current_x)

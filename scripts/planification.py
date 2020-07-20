@@ -6,6 +6,7 @@ from nav_msgs.msg import OccupancyGrid
 import cv2
 import numpy as np
 from helpers import get_theta
+import yaml
 
 path_publisher = None
 initial_pose_publisher = None

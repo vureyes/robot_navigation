@@ -6,12 +6,12 @@ from sensor_msgs.msg import LaserScan
 from nav_msgs.msg import OccupancyGrid, Odometry
 import numpy as np
 from localization_tools import ParticleLocalization
-from helpers import get_theta
+from helpers import get_theta, get_quaternion
 
 laser_reading = None
 navigation_publisher = None
 
-N_PARTICLES = 1000
+N_PARTICLES = 500
 
 execution_started = False
 current_pose = None
@@ -90,7 +90,6 @@ def accion_initial_pose_cb(pose):
     global execution_started
     execution_started = True
     
-
 def run_localization():
     global last_pose
     dist_x = current_pose.position.x - last_pose.position.x
@@ -110,7 +109,18 @@ def send_particles():
         pose.position.y = particle[1]
         pose.orientation.z = particle[2]
         msg.poses.append(pose)
+    average = np.mean(particles, axis=0)
+    pose = Pose()
+    pose.position.x = average[0]
+    pose.position.y = average[1]
+    quat = get_quaternion(average[2])
+    pose.orientation.x = quat[0]
+    pose.orientation.y = quat[1]
+    pose.orientation.z = quat[2]
+    pose.orientation.w = quat[3]
+    pose_publisher.publish(pose)
     particle_publisher.publish(msg)
+
 
 def determine_location():
     location_found = particle_localization.fit_particles()

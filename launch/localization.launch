@@ -26,11 +26,11 @@
     </node>
     <!-- Controlador de bajo nivle de distancia -->
     <node pkg="pid" name="distance_ctrl" type="controller" ns="robot_distance" >
-        <param name="Kp" value="0.4" />     <!--P = 0.4  PI = 0.55-->
+        <param name="Kp" value="0.0001" />     <!--P = 0.4  PI = 0.55-->
         <param name="Ki" value="0.0" />     <!--P = 0.0  PI = 0.001-->
         <param name="Kd" value="0.0" />
-        <param name="upper_limit" value="0.2" />
-        <param name="lower_limit" value="-0.2" />
+        <param name="upper_limit" value="0.1" />
+        <param name="lower_limit" value="-0.1" />
     </node>
     
 
