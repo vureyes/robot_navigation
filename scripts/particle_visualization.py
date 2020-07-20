@@ -11,7 +11,7 @@ final_img = None
 map_loaded = False
 particles = []
 
-def viualization_init():
+def visualization_init():
     rospy.init_node('particle_visualization', anonymous=True)
     rospy.Subscriber("/map", OccupancyGrid, accion_map_cb)
     rospy.Subscriber("/particles", PoseArray, accion_particles_cb)

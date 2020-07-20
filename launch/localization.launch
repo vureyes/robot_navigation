@@ -5,13 +5,15 @@
     <include file="$(find very_simple_robot_simulator)/launch/world_state.launch" />
     
     <!-- Nodo que se encarga de filtrar particulas y localizar al robot -->
-    <node pkg="lab3_pkg" name="localization" type="localization.py" output="screen"/>
+    <node pkg="robot_navigation" name="localization" type="localization.py" output="screen"/>
     <!-- Nodo que se encarga de realizar los movimientos en el mapa -->
-    <node pkg="lab3_pkg" name="movement" type="movement.py" output="screen"/>
+    <node pkg="robot_navigation" name="movement" type="movement.py" output="screen"/>
     <!-- Nodo que se encarga de mostrar las particulas en el mapa e iniciar el flujo -->
-    <node pkg="lab3_pkg" name="particle_visualization" type="particle_visualization.py" output="screen"/>
+    <node pkg="robot_navigation" name="particle_visualization" type="particle_visualization.py" output="screen"/>
+    <!-- Nodo que se encarga de planificar la ruta a segir y recibir poses objetivo -->
+    <node pkg="robot_navigation" name="planification" type="planification.py" output="screen"/>
     <!-- Nodo que se encarga de manejar el sonido -->
-    <node pkg="lab3_pkg" name="sound_node" type="sound_node.py" output="screen"/>
+    <node pkg="robot_navigation" name="sound_node" type="sound_node.py" output="screen"/>
     <node name="soundplay_node" pkg="sound_play" type="soundplay_node.py"/>
 
     <!-- Controlador de bajo nivle de orientacion -->

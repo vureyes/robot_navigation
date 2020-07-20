@@ -75,7 +75,7 @@ def movement_init():
     global distance_enable_publisher
     distance_enable_publisher = rospy.Publisher("/robot_distance/pid_enable", Bool, queue_size=10)
 
-    run_prompt()
+    # run_prompt()
 
     rospy.spin()
 

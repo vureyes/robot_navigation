@@ -6,16 +6,29 @@ from math import sqrt
 import cv2
 from matplotlib import pyplot
 from scipy.ndimage import gaussian_filter
-from scipy.optimize import curve_fit
+
+GAUSSIAN_EXPANSION = 3
+DISTANCE_ERROR = 0.3
+ORIENTATION_ERROR = 0.5
 
 class ParticleLocalization:
     def __init__(self, map_img, map_resolution, n_particles, fixed_angle=False):
         self.map_img = map_img
-        self.map_prob = np.zeros(map_img.shape)
-        self.map_prob = cv2.normalize(gaussian_filter(self.map_img, 10), self.map_prob, 0, 100, cv2.NORM_MINMAX)+np.ones(map_img.shape)
+        self.map_prob = self.create_probability_map()
         self.map_resolution = map_resolution
         self.n_particles = n_particles
-        self.particles = self.create_particles(n_particles,fixed_angle)
+        self.particles = []
+        # self.particles = self.create_particles(n_particles,fixed_angle)
+        # print("plotting map")
+        # pyplot.matshow(self.map_prob)
+        # pyplot.show()
+        
+    def create_probability_map(self):
+        map_prob = np.zeros(self.map_img.shape)
+        map_image = np.copy(self.map_img)
+        map_image[map_image == 19] = 0
+        map_prob = cv2.normalize(gaussian_filter(map_image, GAUSSIAN_EXPANSION), map_prob, 0, 100, cv2.NORM_MINMAX)+np.ones(self.map_img.shape)
+        return map_prob
 
     def MCL(self, movement, sensor_data):
         new_particles = [] # Se guardan aqui las particulas una vez trasladadas y calculando sus nuevos pesos
@@ -42,9 +55,9 @@ class ParticleLocalization:
         dist = sqrt(movement[0]**2 + movement[1]**2)/self.map_resolution
         dist_x = dist*np.cos(particle[2])
         dist_y = dist*np.sin(particle[2])
-        x = int(particle[0] + dist_x + np.random.normal(0,5))
-        y = int(particle[1] + dist_y + np.random.normal(0,5))
-        theta = particle[2] + movement[2] + np.random.normal(0,0.15)
+        x = int(particle[0] + dist_x + np.random.normal(0,3))
+        y = int(particle[1] + dist_y + np.random.normal(0,3))
+        theta = particle[2] + movement[2] + np.random.normal(0,0.05)
         new_particle = [x,y,theta]
         if x >= self.map_img.shape[0] or x < 0 or y >= self.map_img.shape[1] or y < 0:
             return None
@@ -74,11 +87,11 @@ class ParticleLocalization:
 
     def create_particles(self, n_particles, fixed_angle=False):
         particles = []
-        w,h = self.map_img.shape
+        h,w = self.map_img.shape
         count = 0
         while count < n_particles:
-            x = randint(0,w-1)
-            y = randint(0,h-1)
+            x = randint(0,h-1)
+            y = randint(0,w-1)
             theta = randint(0,359)*np.pi/180 if not fixed_angle else np.pi/2
             if self.map_img[x,y] == 0:
                 particles.append([x,y,theta])
@@ -87,7 +100,21 @@ class ParticleLocalization:
         # Retorna una lista de particulas distribuidas uniformemente
 
     def create_particles_from_pose(self, pose):
-        pass
+        particles = []
+        h,w = self.map_img.shape
+        pose_y = pose[0]/self.map_resolution
+        pose_x = h - pose[1]/self.map_resolution
+        pose_theta = pose[2] - np.pi/2
+        count = 0
+        while count < self.n_particles:
+            dist_error = DISTANCE_ERROR/self.map_resolution
+            x = int(pose_x + np.random.normal(0,DISTANCE_ERROR/(3*self.map_resolution)))
+            y = int(pose_y + np.random.normal(0,DISTANCE_ERROR/(3*self.map_resolution)))
+            theta = pose_theta + np.random.normal(ORIENTATION_ERROR)
+            if self.map_img[x,y] == 0:
+                particles.append([x,y,theta])
+                count+=1
+        self.particles = particles
 
     def fit_particles(self):
         std = np.std(self.particles, axis=0)

@@ -1,20 +1,19 @@
 #!/usr/bin/env python
 import rospy
-from std_msgs.msg import Float64, Bool, String
-from geometry_msgs.msg import Twist, Pose, PoseArray
+from std_msgs.msg import Bool, String
+from geometry_msgs.msg import Pose, PoseArray
 from sensor_msgs.msg import LaserScan
 from nav_msgs.msg import OccupancyGrid, Odometry
-import cv2 as cv
-from cv_bridge import CvBridge
 import numpy as np
 from localization_tools import ParticleLocalization
-from movement import get_theta
+from helpers import get_theta
 
 laser_reading = None
 navigation_publisher = None
 
-N_PARTICLES = 5000
+N_PARTICLES = 1000
 
+execution_started = False
 current_pose = None
 last_pose = Pose()
 
@@ -30,6 +29,7 @@ def localization_init():
     rospy.Subscriber("/scan", LaserScan, accion_laser_cb)
     rospy.Subscriber("/odom", Odometry, accion_odom_cb)
     rospy.Subscriber("/command", String, accion_command_cb)
+    rospy.Subscriber("/initial_position", Pose, accion_initial_pose_cb)
 
     global particle_publisher
     particle_publisher = rospy.Publisher("/particles", PoseArray, queue_size=10)
@@ -51,7 +51,7 @@ def accion_map_cb(occ_grid):
     particle_localization = ParticleLocalization(map_img, map_resolution, N_PARTICLES, fixed_angle=False)
     rate = rospy.Rate(0.5)
     rate.sleep()
-    send_particles()
+    # send_particles()
 
 def accion_command_cb(command):
     if command.data == "test":
@@ -75,6 +75,20 @@ def accion_laser_cb(data):
 def accion_odom_cb(odom):
     global current_pose
     current_pose = odom.pose.pose
+    if execution_started:
+        run_localization()
+        send_particles()
+
+def accion_initial_pose_cb(pose):
+    x = pose.position.x
+    y = pose.position.y
+    theta = get_theta(pose.orientation)
+    particle_localization.create_particles_from_pose([x,y,theta])
+    run_localization()
+    send_particles()
+    determine_location()
+    global execution_started
+    execution_started = True
     
 
 def run_localization():
