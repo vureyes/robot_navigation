@@ -10,6 +10,7 @@ import yaml
 
 path_publisher = None
 initial_pose_publisher = None
+pose_list = []
 
 
 def planification_init():
@@ -29,9 +30,20 @@ def planification_init():
     pose.position.x = 2
     pose.position.y = 2
     initial_pose_publisher.publish(pose)
+    import_poses()
 
     rospy.spin()
 
+def import_poses():
+    file = open("poses.yaml")
+    document = yaml.load(file)
+    pose1 = document["pose1"]
+    pose = Pose()
+    pose.position.x = pose1[0]
+    pose.position.y = pose1[1]
+    ## TODO
+    # Transformar a quaternion el angulo para guardarlo en pose
+    initial_pose_publisher.publish
 
 def accion_map_cb(occ_grid):
     # global map_img

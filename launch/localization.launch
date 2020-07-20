@@ -11,14 +11,14 @@
     <!-- Nodo que se encarga de mostrar las particulas en el mapa e iniciar el flujo -->
     <node pkg="robot_navigation" name="particle_visualization" type="particle_visualization.py" output="screen"/>
     <!-- Nodo que se encarga de planificar la ruta a segir y recibir poses objetivo -->
-    <node pkg="robot_navigation" name="planification" type="planification.py" output="screen"/>
+    <node pkg="robot_navigation" name="planification" type="planification.py" output="screen" cwd="node"/>
     <!-- Nodo que se encarga de manejar el sonido -->
     <node pkg="robot_navigation" name="sound_node" type="sound_node.py" output="screen"/>
     <node name="soundplay_node" pkg="sound_play" type="soundplay_node.py"/>
 
     <!-- Controlador de bajo nivle de orientacion -->
     <node pkg="pid" name="rotation_ctrl" type="controller" ns="robot_rotation" >
-        <param name="Kp" value="0.7" />     <!--P = 0.7   PI =0.6 -->
+        <param name="Kp" value="0.3" />     <!--P = 0.7   PI =0.6 -->
         <param name="Ki" value="0.0" />     <!--P = 0.0   PI =0.001 -->
         <param name="Kd" value="0.0" />
         <param name="upper_limit" value="0.6" />
