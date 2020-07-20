@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 import rospy
-from std_msgs.msg import Bool
+from std_msgs.msg import Bool, String
 from geometry_msgs.msg import PoseArray, Pose
 from nav_msgs.msg import OccupancyGrid
 import cv2
@@ -10,6 +10,8 @@ import yaml
 
 path_publisher = None
 initial_pose_publisher = None
+notification_publisher = None
+path_request_publisher = None
 pose_list = []
 map_img = None
 map_resolution = None
@@ -25,6 +27,10 @@ def planification_init():
     path_publisher = rospy.Publisher("/path_poses", PoseArray, queue_size=10)
     global initial_pose_publisher
     initial_pose_publisher = rospy.Publisher("/initial_position", Pose, queue_size=10)
+    global notification_publisher
+    notification_publisher = rospy.Publisher("/sound_string", String, queue_size=10)
+    global path_request_publisher
+    path_request_publisher = rospy.Publisher("/path_request", PoseArray, queue_size=10)
 
     raw_input("Type anything to start > ")
     import_poses()
@@ -60,9 +66,12 @@ def accion_map_cb(occ_grid):
 
 def accion_completed_cb(boolean):
     if len(pose_list) > 0:
-        send_poses([pose_list.pop(0)], pixels = False)
+        # send_poses([pose_list.pop(0)], pixels = False)
+        request_path(last_pose, pose_list.pop(0))
+        notification_publisher.publish(String("checkpoint"))
+
     else:
-        print("Terminado!!")
+        notification_publisher.publish(String("finished"))
     # Recibe un mensaje desde el nodo de movimiento que le dice que ya termino de avanzar
     # hasta la ultima pose de la lista
     # Deberia sacar una pose de la lista de objetivos y hacer trigger de la generacion de un camino
@@ -70,6 +79,21 @@ def accion_completed_cb(boolean):
     # (Probablemente la espera de 5 segundos deberia ser aqui)
     # (Tambien deberia revisar aqui si es destino intermedio o llego al final y mandar signal a nodo de sonido)
     pass
+
+def request_path(poses, pixels=False):
+    pose_array = PoseArray()
+    for p in poses:
+        pose_x = p[0]
+        pose_y = p[1]
+        pose_theta = p[2]
+        if not pixels:
+            pose_y = p[0]/map_resolution
+            pose_x = map_img.shape[0] - p[1]/map_resolution
+            pose_theta = pose_theta + np.pi/2
+        pose = build_pose(pose_x,pose_y,pose_theta)
+        pose_array.poses.append(pose)
+    path_request_publisher.publish(pose_array)
+
 
 def send_poses(poses, pixels=True):
     pose_array = PoseArray()
@@ -81,7 +105,7 @@ def send_poses(poses, pixels=True):
             pose_y = p[0]/map_resolution
             pose_x = map_img.shape[0] - p[1]/map_resolution
             pose_theta = pose_theta + np.pi/2
-        print(pose_x, pose_y, pose_theta)
+        # print(pose_x, pose_y, pose_theta)
         pose = build_pose(pose_x,pose_y,pose_theta)
         pose_array.poses.append(pose)
     path_publisher.publish(pose_array)
