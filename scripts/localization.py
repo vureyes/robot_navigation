@@ -1,35 +1,26 @@
 #!/usr/bin/env python
 import rospy
-from std_msgs.msg import Float64, Bool, String
-from geometry_msgs.msg import Twist, Pose, PoseArray
+from std_msgs.msg import Bool, String
+from geometry_msgs.msg import Pose, PoseArray
 from sensor_msgs.msg import LaserScan
 from nav_msgs.msg import OccupancyGrid, Odometry
-import cv2 as cv
-from cv_bridge import CvBridge
 import numpy as np
 from localization_tools import ParticleLocalization
-from movement import get_theta
+from helpers import get_theta, get_quaternion
 
 laser_reading = None
 navigation_publisher = None
-orientation_enable_publisher=None
-orientation_set_point_publisher=None
-orientation_plant_state_publisher=None
-left_distance = None
-front_distance = None
 
-last_linear_vel = 0
-last_angluar_vel = 0
-control_rate = 10
-n_particles = 5000
+N_PARTICLES = 500
 
-obstacle_ahead = False
+execution_started = False
 current_pose = None
 last_pose = Pose()
 
 particle_localization = None
 particle_publisher = None
 movement_publisher = None
+pose_publisher = None
 sound_publisher = None
 
 def localization_init():
@@ -38,6 +29,7 @@ def localization_init():
     rospy.Subscriber("/scan", LaserScan, accion_laser_cb)
     rospy.Subscriber("/odom", Odometry, accion_odom_cb)
     rospy.Subscriber("/command", String, accion_command_cb)
+    rospy.Subscriber("/initial_position", Pose, accion_initial_pose_cb)
 
     global particle_publisher
     particle_publisher = rospy.Publisher("/particles", PoseArray, queue_size=10)
@@ -45,6 +37,8 @@ def localization_init():
     movement_publisher = rospy.Publisher("/move", Bool, queue_size=10)
     global sound_publisher
     sound_publisher = rospy.Publisher("/sound_string", String, queue_size=10)
+    global pose_publisher
+    pose_publisher = rospy.Publisher("/particle_pose", Pose, queue_size=10)
 
     rospy.spin()
 
@@ -54,14 +48,13 @@ def accion_map_cb(occ_grid):
     map_resolution = occ_grid.info.resolution
     map_img = np.array(occ_grid.data).reshape((height, width))
     global particle_localization
-    particle_localization = ParticleLocalization(map_img, map_resolution, n_particles, fixed_angle=False)
+    particle_localization = ParticleLocalization(map_img, map_resolution, N_PARTICLES, fixed_angle=False)
     rate = rospy.Rate(0.5)
     rate.sleep()
-    send_particles()
+    # send_particles()
 
 def accion_command_cb(command):
     if command.data == "test":
-        # particle_localization.test_sensor_model(laser_reading)
         particle_localization.test_MCL(laser_reading)
         send_particles()
     elif command.data == "run":
@@ -69,7 +62,6 @@ def accion_command_cb(command):
         send_particles()
         determine_location()
         # movement_publisher.publish(Bool(True))
-
     elif command.data == "move":
         particle_localization.test_motion_model([0.2,0,0])
         send_particles()
@@ -78,17 +70,26 @@ def accion_laser_cb(data):
     ranges = data.ranges[62:119]
     global laser_reading
     laser_reading = ranges
-    global left_distance
-    left_distance = ranges[-1]
-    global obstacle_ahead
-    obstacle_ahead = True if ranges[28]< 0.45 or ranges[-1]<0.45 else False
 
 
-def accion_odom_cb(odom):               # Callback que se encarga de actualizar posicion basada en odometria
+def accion_odom_cb(odom):
     global current_pose
     current_pose = odom.pose.pose
-    
+    if execution_started:
+        run_localization()
+        send_particles()
 
+def accion_initial_pose_cb(pose):
+    x = pose.position.x
+    y = pose.position.y
+    theta = get_theta(pose.orientation)
+    particle_localization.create_particles_from_pose([x,y,theta])
+    run_localization()
+    send_particles()
+    determine_location()
+    global execution_started
+    execution_started = True
+    
 def run_localization():
     global last_pose
     dist_x = current_pose.position.x - last_pose.position.x
@@ -108,7 +109,18 @@ def send_particles():
         pose.position.y = particle[1]
         pose.orientation.z = particle[2]
         msg.poses.append(pose)
+    average = np.mean(particles, axis=0)
+    pose = Pose()
+    pose.position.x = average[0]
+    pose.position.y = average[1]
+    quat = get_quaternion(average[2])
+    pose.orientation.x = quat[0]
+    pose.orientation.y = quat[1]
+    pose.orientation.z = quat[2]
+    pose.orientation.w = quat[3]
+    pose_publisher.publish(pose)
     particle_publisher.publish(msg)
+
 
 def determine_location():
     location_found = particle_localization.fit_particles()

@@ -11,7 +11,7 @@ from localization_tools import ParticleLocalization
 from math import atan2, pi, sqrt
 from tf.transformations import euler_from_quaternion, quaternion_from_euler
 
-
+MOVEMENT_DISTANCE = 50
 
 # Publishers de controlador de rotacion
 rotation_enable_publisher = None
@@ -49,8 +49,9 @@ command_publisher = None
 def movement_init():
     rospy.init_node('movement', anonymous=True)
     rospy.Subscriber("/scan", LaserScan, accion_laser_cb)
-    rospy.Subscriber("/odom", Odometry, accion_odom_cb)
+    # rospy.Subscriber("/odom", Odometry, accion_odom_cb)
     rospy.Subscriber("/move", Bool, accion_move_cb)
+    rospy.Subscriber("/particle_pose", Pose, accion_pose_cb)
 
     global navigation_publisher
     navigation_publisher = rospy.Publisher('/yocs_cmd_vel_mux/input/navigation', Twist, queue_size=10)
@@ -75,7 +76,7 @@ def movement_init():
     global distance_enable_publisher
     distance_enable_publisher = rospy.Publisher("/robot_distance/pid_enable", Bool, queue_size=10)
 
-    run_prompt()
+    # run_prompt()
 
     rospy.spin()
 
@@ -83,6 +84,7 @@ def accion_rotation_control_effort_cb(rotation_effort):
     ejecutar_giro(rotation_effort.data)
 
 def accion_distance_control_effort_cb(distance_effort):
+    print(distance_effort.data)
     ejecutar_desplazamineto(distance_effort.data)
 
 def accion_laser_cb(data):
@@ -99,6 +101,11 @@ def accion_odom_cb(odom):               # Callback que se encarga de actualizar 
     global current_pose
     current_pose = odom.pose.pose
 
+def accion_pose_cb(pose):
+    print(pose)
+    global current_pose
+    current_pose = pose
+
 def accion_move_cb(boolean):
     if obstacle_ahead:
         angle = get_theta(current_pose.orientation)
@@ -109,8 +116,8 @@ def accion_move_cb(boolean):
 
 def set_goal():
     angle = get_theta(current_pose.orientation)
-    x = current_pose.position.x + 0.5*np.cos(angle)
-    y = current_pose.position.y + 0.5*np.sin(angle)
+    x = current_pose.position.x + MOVEMENT_DISTANCE*np.cos(angle)
+    y = current_pose.position.y + MOVEMENT_DISTANCE*np.sin(angle)
     goal = Pose()
     goal.position.x = x
     goal.position.y = y
@@ -204,7 +211,7 @@ def desplazamiento_controlado(goal):
 def ejecutar_desplazamineto(distance_effort):
     global last_distance_effort
     # Si el error es lo suficientemente chico y el esfuerzo del controlador tambien, detenemos el avance
-    if abs(current_distance_goal - distance(distance_starting_point,current_pose)) < 0.005 and abs(distance_effort) < 0.1:
+    if abs(current_distance_goal - distance(distance_starting_point,current_pose)) < 10 and abs(distance_effort) < 0.05:
         set_distance_lock(False)
         distance_control_enable(False)
         distance_effort = 0
@@ -262,6 +269,10 @@ def get_theta(quaternion):
     elif theta > 2*pi:
         theta = theta%(2*pi)
     return theta
+
+def get_quaternion(theta):
+    quaternion = quaternion_from_euler(0,0,theta,'xyz')
+    return quaternion
 
 # Calcula primer angulo para apuntar al objetivo
 def angulo_direccion(goal_y, current_y, goal_x, current_x):
