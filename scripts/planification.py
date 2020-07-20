@@ -20,7 +20,6 @@ def planification_init():
     rospy.init_node('path_planification', anonymous=True)
     rospy.Subscriber("/map", OccupancyGrid, accion_map_cb)
     rospy.Subscriber("/path_completed", Bool, accion_completed_cb)
-    rospy.Subscriber("/located", Bool, accion_located_cb)
 
     global path_publisher
     path_publisher = rospy.Publisher("/path_poses", PoseArray, queue_size=10)
@@ -59,12 +58,11 @@ def accion_map_cb(occ_grid):
     # Idealmente cuando se recibe el mapa se deberia generar el grafo de conectividad
     pass
 
-def accion_located_cb(boolean):
-    path = []
-
-    pass
-
 def accion_completed_cb(boolean):
+    if len(pose_list) > 0:
+        send_poses([pose_list.pop(0)], pixels = False)
+    else:
+        print("Terminado!!")
     # Recibe un mensaje desde el nodo de movimiento que le dice que ya termino de avanzar
     # hasta la ultima pose de la lista
     # Deberia sacar una pose de la lista de objetivos y hacer trigger de la generacion de un camino
@@ -76,13 +74,14 @@ def accion_completed_cb(boolean):
 def send_poses(poses, pixels=True):
     pose_array = PoseArray()
     for p in poses:
-        pose_x = pose[0]
-        pose_y = pose[1]
-        pose_theta = pose[2]
+        pose_x = p[0]
+        pose_y = p[1]
+        pose_theta = p[2]
         if not pixels:
-            pose_x = pose_x/map_resolution
-            pose_y = pose_y/map_resolution
-            pose_theta = pose_theta - np.pi/2
+            pose_y = p[0]/map_resolution
+            pose_x = map_img.shape[0] - p[1]/map_resolution
+            pose_theta = pose_theta + np.pi/2
+        print(pose_x, pose_y, pose_theta)
         pose = build_pose(pose_x,pose_y,pose_theta)
         pose_array.poses.append(pose)
     path_publisher.publish(pose_array)

@@ -7,7 +7,7 @@ import cv2
 from matplotlib import pyplot
 from scipy.ndimage import gaussian_filter
 
-GAUSSIAN_EXPANSION = 3
+GAUSSIAN_EXPANSION = 2
 DISTANCE_ERROR = 0.3
 ORIENTATION_ERROR = 0.5
 
@@ -57,7 +57,7 @@ class ParticleLocalization:
         dist_y = dist*np.sin(particle[2])
         x = int(particle[0] + dist_x + np.random.normal(0,3))
         y = int(particle[1] + dist_y + np.random.normal(0,3))
-        theta = particle[2] + movement[2] + np.random.normal(0,0.05)
+        theta = particle[2] + movement[2] + np.random.normal(0,0.01)
         new_particle = [x,y,theta]
         if x >= self.map_img.shape[0] or x < 0 or y >= self.map_img.shape[1] or y < 0:
             return None
@@ -110,7 +110,7 @@ class ParticleLocalization:
             dist_error = DISTANCE_ERROR/self.map_resolution
             x = int(pose_x + np.random.normal(0,DISTANCE_ERROR/(5*self.map_resolution)))
             y = int(pose_y + np.random.normal(0,DISTANCE_ERROR/(5*self.map_resolution)))
-            theta = pose_theta + np.random.normal(ORIENTATION_ERROR/10)
+            theta = pose_theta + np.random.normal(ORIENTATION_ERROR/5)
             if self.map_img[x,y] == 0:
                 particles.append([x,y,theta])
                 count+=1

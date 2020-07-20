@@ -11,7 +11,7 @@ from helpers import get_theta, get_quaternion
 laser_reading = None
 navigation_publisher = None
 
-N_PARTICLES = 500
+N_PARTICLES = 1000
 
 execution_started = False
 current_pose = None
@@ -22,6 +22,7 @@ particle_publisher = None
 movement_publisher = None
 pose_publisher = None
 sound_publisher = None
+complete_publisher = None
 
 def localization_init():
     rospy.init_node('localization', anonymous=True)
@@ -39,7 +40,8 @@ def localization_init():
     sound_publisher = rospy.Publisher("/sound_string", String, queue_size=10)
     global pose_publisher
     pose_publisher = rospy.Publisher("/particle_pose", Pose, queue_size=10)
-
+    global complete_publisher
+    complete_publisher = rospy.Publisher("/path_completed", Bool, queue_size=10)
     rospy.spin()
 
 def accion_map_cb(occ_grid):
@@ -70,8 +72,7 @@ def accion_laser_cb(data):
     ranges = data.ranges[62:119]
     global laser_reading
     laser_reading = ranges
-
-
+    
 def accion_odom_cb(odom):
     global current_pose
     current_pose = odom.pose.pose
@@ -89,6 +90,7 @@ def accion_initial_pose_cb(pose):
     determine_location()
     global execution_started
     execution_started = True
+    complete_publisher.publish(Bool(True))
     
 def run_localization():
     global last_pose
@@ -129,7 +131,7 @@ def determine_location():
     else:
         sound_publisher.publish(String("located"))
     
-    movement_publisher.publish(Bool())
+    # movement_publisher.publish(Bool())
 
 
 if __name__ == '__main__':

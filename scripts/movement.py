@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 import rospy
 from std_msgs.msg import Float64, Bool, String
-from geometry_msgs.msg import Twist, Pose
+from geometry_msgs.msg import Twist, Pose, PoseArray
 from sensor_msgs.msg import LaserScan
 from nav_msgs.msg import OccupancyGrid, Odometry
 import cv2 as cv
@@ -44,7 +44,7 @@ laser_reading = None
 left_distance = None
 obstacle_ahead = None
 
-command_publisher = None
+path_completed_publisher = None
 
 def movement_init():
     rospy.init_node('movement', anonymous=True)
@@ -52,11 +52,12 @@ def movement_init():
     # rospy.Subscriber("/odom", Odometry, accion_odom_cb)
     rospy.Subscriber("/move", Bool, accion_move_cb)
     rospy.Subscriber("/particle_pose", Pose, accion_pose_cb)
+    rospy.Subscriber("/path_poses", PoseArray, accion_path_cb)
 
     global navigation_publisher
     navigation_publisher = rospy.Publisher('/yocs_cmd_vel_mux/input/navigation', Twist, queue_size=10)
-    global command_publisher
-    command_publisher= rospy.Publisher('/command', String, queue_size=10)
+    global path_completed_publisher
+    path_completed_publisher= rospy.Publisher('/path_completed', Bool, queue_size=10)
 
     #Topicos de controlador de rotacion
     rospy.Subscriber("/robot_rotation/control_effort", Float64, accion_rotation_control_effort_cb)
@@ -84,7 +85,7 @@ def accion_rotation_control_effort_cb(rotation_effort):
     ejecutar_giro(rotation_effort.data)
 
 def accion_distance_control_effort_cb(distance_effort):
-    print(distance_effort.data)
+    # print(distance_effort.data)
     ejecutar_desplazamineto(distance_effort.data)
 
 def accion_laser_cb(data):
@@ -102,7 +103,7 @@ def accion_odom_cb(odom):               # Callback que se encarga de actualizar 
     current_pose = odom.pose.pose
 
 def accion_pose_cb(pose):
-    print(pose)
+    # print(pose)
     global current_pose
     current_pose = pose
 
@@ -113,6 +114,9 @@ def accion_move_cb(boolean):
     else:
         goal = set_goal()
         desplazamiento_controlado(goal)
+
+def accion_path_cb(pose_array):
+    mover_robot_a_destino(pose_array.poses)
 
 def set_goal():
     angle = get_theta(current_pose.orientation)
@@ -127,11 +131,11 @@ def set_goal():
 def notify_movement_end():
     command_publisher.publish(String("run"))
 
-def run_prompt():
-    while True:
-        command = raw_input("> ")
-        msg = String(command)
-        command_publisher.publish(msg)
+# def run_prompt():
+#     while True:
+#         command = raw_input("> ")
+#         msg = String(command)
+#         command_publisher.publish(msg)
 
 '''
 #####################################
@@ -147,7 +151,7 @@ def giro_controlado(goal_theta):
         rotation_publish_state()            # Enviamos el estado de planta al controlador
         rate.sleep()
     print("Giro Finalizado")
-    notify_movement_end()
+    # notify_movement_end()
 
 def ejecutar_giro(rotation_effort):
     # print(current_rotation_goal, get_theta(current_pose.orientation))
@@ -206,7 +210,7 @@ def desplazamiento_controlado(goal):
         distance_publish_state()            # Enviamos el estado de planta al controlador
         rate.sleep()
     print("Desplazamiento Finalizado")
-    notify_movement_end()
+    # notify_movement_end()
 
 def ejecutar_desplazamineto(distance_effort):
     global last_distance_effort
@@ -215,11 +219,11 @@ def ejecutar_desplazamineto(distance_effort):
         set_distance_lock(False)
         distance_control_enable(False)
         distance_effort = 0
-    elif obstacle_ahead:
-        if last_distance_effort == 0:
-            set_distance_lock(False)
-            distance_control_enable(False)
-        distance_effort = 0
+    # elif obstacle_ahead:
+    #     if last_distance_effort == 0:
+    #         set_distance_lock(False)
+    #         distance_control_enable(False)
+    #     distance_effort = 0
     # Saturar el esfuerzo del controlador
     distance_effort = saturate(distance_effort, last_meassure=last_distance_effort, max_value=0.5, rate=pid_rate)
     # Aplicar el esfuerzo
@@ -261,6 +265,23 @@ def set_distance_lock(boolean):
 #     Procesamiento de Goals        #
 #####################################
 '''
+def mover_robot_a_destino(goal_pose):   # Mueve robot a las poses exactas definidas en la lista goal_pose
+    global current_pose
+    for goal in goal_pose:
+        # Primero cambiamos orientacion para apuntar hacia el objetivo (en caso de que no este ya dirigido a este)
+        orientation_theta = angulo_direccion(goal.position.y, current_pose.position.y, goal.position.x, current_pose.position.x)
+        if orientation_theta != 0:
+            print("Orientando correctamente", orientation_theta)
+            giro_controlado(orientation_theta)
+        # Despues avanzamos la distancia 
+        desplazamiento_controlado(goal)
+
+        # Giramos a la posicion final
+        goal_theta = get_theta(goal.orientation)
+        print("Girando a", goal_theta)
+        giro_controlado(goal_theta)
+
+        path_completed_publisher.publish(Bool(True))
 
 def get_theta(quaternion):
     theta = euler_from_quaternion([quaternion.x, quaternion.y, quaternion.z, quaternion.w])[2]
