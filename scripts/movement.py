@@ -281,7 +281,7 @@ def mover_robot_a_destino(goal_pose):   # Mueve robot a las poses exactas defini
         print("Girando a", goal_theta)
         giro_controlado(goal_theta)
 
-        path_completed_publisher.publish(Bool(True))
+    path_completed_publisher.publish(Bool(True))
 
 def get_theta(quaternion):
     theta = euler_from_quaternion([quaternion.x, quaternion.y, quaternion.z, quaternion.w])[2]

@@ -66,9 +66,13 @@ def accion_map_cb(occ_grid):
 
 def accion_completed_cb(boolean):
     if len(pose_list) > 0:
-        # send_poses([pose_list.pop(0)], pixels = False)
-        request_path(last_pose, pose_list.pop(0))
         notification_publisher.publish(String("checkpoint"))
+        global last_pose
+        rate = rospy.Rate(0.2)
+        rate.sleep()
+        goal = pose_list.pop(0)
+        request_path([last_pose, goal])
+        last_pose = goal
 
     else:
         notification_publisher.publish(String("finished"))

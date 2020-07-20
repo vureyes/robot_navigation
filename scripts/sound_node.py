@@ -16,9 +16,8 @@ def sound_node():
 
 def accion_sound_cb(state):
     global last_sound
-    if state.data != last_sound:
-        sound = sound_client.voiceSound(state.data)
-        sound.play()
+    sound = sound_client.voiceSound(state.data)
+    sound.play()
     last_sound = state.data
 
 
